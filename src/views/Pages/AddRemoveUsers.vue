@@ -83,10 +83,10 @@
 </template>
 <script>
 import { API, graphqlOperation } from 'aws-amplify';
-import * as queries from '../../graphql/queries.js';
-import * as mutations from '../../graphql/mutations.js';
-import { getUser, listUsers, listFriends, getUserFriend } from '../../graphql/queries';
-import { deleteRequests } from '../../graphql/mutations';
+import * as queries from '@/graphql/queries.js';
+import * as mutations from '@/graphql/mutations.js';
+import { getUser, listUsers, listFriends, getUserFriend } from '@/graphql/queries';
+import { deleteRequests } from '@/graphql/mutations';
 
 export default {
   name: "suggestedpeople",
@@ -112,9 +112,11 @@ export default {
   {
     handleClick(user) 
     {
+      this.$ga.event('registered', 'follow-user');
     },
     async handleAddClick(user) 
     {
+      this.$ga.event('registered', 'add-friend');
       const addUser = {
         id: this.$store.state.user.username + "" + user.username, 
         requestsUserId: this.$store.state.user.username,
