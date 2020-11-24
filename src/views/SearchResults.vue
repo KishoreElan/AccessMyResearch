@@ -37,7 +37,7 @@
               min-width="150px"
             >
               <template v-slot="{ row }">
-                {{row._source.author}}
+                {{ row._source.author }}
      
                   <div 
                     class="emailIcon"
@@ -107,7 +107,7 @@
                                   {{author.name}}
                                 </p>
                                 <p v-for="(link, iii) in result.bibjson.link" :key="iii + link.url"> 
-                                  Link/URL: <a :href="link.url">{{ link.url}}</a>
+                                  Link/URL: <a :href="link.url" target="_blank" @click="$ga.event('link', 'goto-external', link.url)">{{ link.url }}</a>
                                 </p>
                                 <p>Description/Abstract: {{result.bibjson.abstract}}</p>
                                 <hr role="separator" aria-orientation="horizontal" class="dropdown-divider">
@@ -161,14 +161,13 @@ const client = new Client({ node: "http://localhost:9600/" });
 
 export default {
   components: {
-    LightTable,
+    // LightTable,
     [Table.name]: Table,
     [TableColumn.name]: TableColumn,
     Email
   },
   data() {
     return {
-
       results:[],
       results_doaj: [],
       results_doi: [],
@@ -181,18 +180,17 @@ export default {
       emailModal: {
         emailOpts: []
       }
-
     };
   },
   computed: {
     text() {
-      this.blacklistText = " ";
+      // this.blacklistText = " ";
       //this.rawText = this.$route.query.text;
       //alert(this.rawText)
       var re = /(?:^|\s)(-[a-z0-9]\w*)/gi; // finding words starting with -
       var match;
       while ((match = re.exec(this.$route.query.text)) != null) {
-        this.blacklistText = this.blacklistText + " " + match[0].substring(2); //extracting filtered words
+        // this.blacklistText = this.blacklistText + " " + match[0].substring(2); //extracting filtered words
       }
       //alert(this.blacklistText)
       return this.$route.query.text || 1;
@@ -246,60 +244,8 @@ export default {
         return publishedDateList;
       }
     },
-    performSearch() {
-    //   var startTime, endTime;
-    //   this.results = [];
-    //   startTime = new Date();
-    //   const searchQuery = {};
-    //   searchQuery[startTime] = this.$route.query.text;
 
-      axios
-      .get(`https://api.unpaywall.org/v2/search/?query=${this.$route.query.text}&email=your_email&is_oa=true`)
-      .then((response) => {
-          this.elapsed_time = response.data.elapsed_seconds
-          this.results = response.data.results
-       });
-      // .post('http://localhost:3000/search', searchQuery)
-      // .then(function (response) {
-      //   console.log(response);
-      // })
-      // .catch(function (error) {
-      //    console.log(error);
-      // });
-
-    //   let searchResults = await client
-    //     .search({
-    //       index: "amr",
-    //       body: {
-    //         query: {
-    //           bool: {
-    //             must_not:{
-    //               query_string: {
-    //                 fields: [ "title", "author", "message", "count"],
-    //                 query: this.blacklistText,
-    //               }
-    //             },
-    //             should:{
-    //               query_string: {
-    //                 fields: [ "title", "author", "message", "count"],
-    //                 query: this.$route.query.text,
-    //               }
-    //             },
-    //           },
-    //         },
-    //       },
-    //     })
-    //     .then((res) => res)
-    //     .catch((e) => {
-    //       console.log(e);
-    //     });
-    //   endTime = new Date();
-    //   var timeDiff = endTime - startTime;
-    //   this.timeTotal = this.timeTotal + timeDiff;
-    //   this.results.push(...searchResults.hits.hits);
-    },
-
-    async performSearch() {
+    async performSearcht() {
        var startTime, endTime;
        this.results = [];
        this.lengthResults = 0; 
@@ -344,17 +290,13 @@ export default {
               bool: {
                 must_not: {
                   query_string: {
-
                     fields: [ "title", "authors", "description", "datePublished", "url", "doi"],
-
                     query: this.blacklistText,
                   },
                 },
                 should: {
                   query_string: {
-
                     fields: [ "title", "authors", "description", "datePublished", "url", "doi"],
-
                     query: this.$route.query.text,
                   },
                 },
@@ -362,9 +304,8 @@ export default {
             },
           },
         })
-        .then((res) => res)
         .catch((e) => {
-          console.log(e);
+          console.log("AMR Results errored:", e);
         });
 
       this.searchStatus = '';
@@ -373,15 +314,14 @@ export default {
       var timeDiff = endTime - startTime;
       this.timeTotal = this.timeTotal + timeDiff;
 
-      for(var hit of searchResults.hits.hits) {
-        hit._source.authors = this.arrayToString(hit._source.authors);
-        hit._source.url = this.arrayToString(hit._source.url);
-        hit._source.description = this.shortenDescription(hit._source.description);
+      if(searchResults && searchResults.hits && searchResults.hits.hits){
+        for(var hit of searchResults.hits.hits) {
+          hit._source.authors = this.arrayToString(hit._source.authors);
+          hit._source.url = this.arrayToString(hit._source.url);
+          hit._source.description = this.shortenDescription(hit._source.description);
+        }
+        this.results.push(...searchResults.hits.hits);
       }
-      this.results.push(...searchResults.hits.hits);
-
-      //if (searchResults)
-        //this.results.push(...searchResults.hits.hits);
 
       //Subject to change - if Elasticsearch doesn't get any results from this search (i.e., we don't have anything about DOI in our data),
       // then check to see if there is a valid in the query string (e.g. 10.1510/12616/asghja/125)
@@ -405,7 +345,7 @@ export default {
             if (response && response.status === 200) {
               var newRow = {
                 _source: {
-                  title: response.data.message.title[0],
+                  snippet: response.data.message.title[0],
                   author: response.data.message.author[0].family + ", " + response.data.message.author[0].given,
                   isDoi: true,
                   doi: doi
